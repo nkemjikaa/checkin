@@ -1,16 +1,45 @@
-# checkin
+# CheckIn - Subsidized Shop Access App
 
-A new Flutter project.
+CheckIn (don't know if this will be the name :) is a flutter based mobile app designed to help the Nigerian government and partners regulate access to subsidized food shops. It ensures that vulnerble citizens can only enter once a week and are limited to a fixed spending threshold.
 
-## Getting Started
+The spending threshold and restricted access was needed to deter customers from buying in bulk and reseelling the goods.
 
-This project is a starting point for a Flutter application.
+## Features
 
-A few resources to get you started if this is your first Flutter project:
+🔐 Secure Login: Username/password-based access, not tied to emails.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+🆔 NIN & Voter Card Check-In: Validate visitor identity before entry.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+📅 Visit Logging: Tracks last visit and full visit history.
+
+🚫 Access Control: Denies entry if a visitor has already checked in within 7 days.
+
+✅ Registration System: Register unrecognized NINs with personal details.
+
+🔄 Firestore Integration: Stores user data, visit dates, and validation info.
+
+🔄 Future Integration: Using fingerprint functionality for faster access and recognition.
+
+## Technology
+
+Flutter (UI Framework)
+Firebase Firestore - Cloud Database
+Firebase Core
+Cloud Firestore plugin
+
+## Setup Instructions
+Clone the repo:
+git clone https://github.com/nkemjikaa/checkin.git
+cd checkin
+
+Install dependencies:
+flutter pub get
+
+Add Firebase Configs:
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+Run the app:
+flutter run
+
+
