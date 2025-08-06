@@ -7,6 +7,8 @@ import 'options.dart';
 import 'vc_checkin.dart';
 import 'nin_registration.dart';
 import 'unregistered_nin.dart';
+import 'vc_registration.dart';
+import 'unregistered_vc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
