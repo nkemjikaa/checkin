@@ -30,21 +30,52 @@ class _VCRegistrationState extends State<VCRegistration> {
     setState(() => _isSubmitting = true);
 
     try {
-      await FirebaseFirestore.instance.collection('voters').doc(widget.serial).set({
-        'first_name': firstName,
-        'last_name': lastName,
-        'dob': _dob!.toIso8601String(),
-        'last_visit': DateTime.now(),
-        'visit_history': FieldValue.arrayUnion([DateTime.now()]),
+      final citizensCollection = FirebaseFirestore.instance.collection('citizens');
+      final querySnapshot = await citizensCollection
+          .where('first_name', isEqualTo: firstName)
+          .where('last_name', isEqualTo: lastName)
+          .where('dob', isEqualTo: _dob!.toIso8601String())
+          .get();
+
+      DocumentReference citizenDocRef;
+      Map<String, dynamic> citizenData;
+
+      if (querySnapshot.docs.isNotEmpty) {
+        // Update existing citizen
+        citizenDocRef = querySnapshot.docs.first.reference;
+        await citizenDocRef.update({'vc_serial': widget.serial});
+        final updatedDoc = await citizenDocRef.get();
+        citizenData = updatedDoc.data() as Map<String, dynamic>;
+      } else {
+        // Create new citizen
+        citizenData = {
+          'first_name': firstName,
+          'last_name': lastName,
+          'dob': _dob!.toIso8601String(),
+          'nin': null,
+          'vc_serial': widget.serial,
+          'last_visit': DateTime.now(),
+          'visit_history': [DateTime.now()],
+        };
+        citizenDocRef = await citizensCollection.add(citizenData);
+      }
+
+      // Create voter document with reference to citizen
+      await FirebaseFirestore.instance.collection('vc_serial').doc(widget.serial).set({
+        'citizenId': citizenDocRef.id,
       });
 
-    Navigator.pushReplacement(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => VCCompletionScreen(
-            firstName: firstName,
-            lastName: lastName,
-            lastVisit: DateTime.now(),
+            firstName: citizenData['first_name'],
+            lastName: citizenData['last_name'],
+            lastVisit: citizenData['last_visit'] is Timestamp
+                ? (citizenData['last_visit'] as Timestamp).toDate()
+                : citizenData['last_visit'] is DateTime
+                    ? citizenData['last_visit']
+                    : DateTime.now(),
           ),
         ),
       );

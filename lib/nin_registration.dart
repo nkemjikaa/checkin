@@ -30,21 +30,34 @@ class _NINRegistrationState extends State<NINRegistration> {
     setState(() => _isSubmitting = true);
 
     try {
-      await FirebaseFirestore.instance.collection('users').doc(widget.nin).set({
+      final citizensRef = FirebaseFirestore.instance.collection('citizens');
+      final usersRef = FirebaseFirestore.instance.collection('nin');
+
+      final now = DateTime.now();
+
+      // Create a new citizen record
+      final citizenDoc = await citizensRef.add({
         'first_name': firstName,
         'last_name': lastName,
         'dob': _dob!.toIso8601String(),
-        'last_visit': DateTime.now(),
-        'visit_history': FieldValue.arrayUnion([DateTime.now()]),
+        'nin': widget.nin,
+        'vc_serial': null,
+        'last_visit': now,
+        'visit_history': [now],
       });
 
-    Navigator.pushReplacement(
+      // Create a user record referencing the citizen
+      await usersRef.doc(widget.nin).set({
+        'citizenId': citizenDoc.id,
+      });
+
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => NINCompletionScreen(
             firstName: firstName,
             lastName: lastName,
-            lastVisit: DateTime.now(),
+            lastVisit: now,
           ),
         ),
       );
