@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'vc_completion.dart';
+import 'existing_vc.dart';
 
 class VCRegistration extends StatefulWidget {
   final String serial;
@@ -30,24 +31,69 @@ class _VCRegistrationState extends State<VCRegistration> {
     setState(() => _isSubmitting = true);
 
     try {
-      await FirebaseFirestore.instance.collection('vc_serial').doc(widget.serial).set({
-        'first_name': firstName,
-        'last_name': lastName,
-        'dob': _dob!.toIso8601String(),
-        'last_visit': DateTime.now(),
-        'visit_history': FieldValue.arrayUnion([DateTime.now()]),
-      });
+      final citizensRef = FirebaseFirestore.instance.collection('citizens');
+      final vcSerialRef = FirebaseFirestore.instance.collection('vc_serial');
 
-    Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => VCCompletionScreen(
-            firstName: firstName,
-            lastName: lastName,
-            lastVisit: DateTime.now(),
+      final now = DateTime.now();
+
+      // Check if a citizen with the same first_name, last_name, and dob exists
+      final querySnapshot = await citizensRef
+          .where('first_name', isEqualTo: firstName)
+          .where('last_name', isEqualTo: lastName)
+          .where('dob', isEqualTo: Timestamp.fromDate(_dob!))
+          .get();
+
+      DocumentReference citizenDocRef;
+      DateTime lastVisit;
+      if (querySnapshot.docs.isNotEmpty) {
+        // Update existing citizen document - only update 'vc_serial' field
+        final existingDoc = querySnapshot.docs.first;
+        citizenDocRef = citizensRef.doc(existingDoc.id);
+
+        await citizenDocRef.update({
+          'vc_serial': widget.serial,
+        });
+       // Use existing last_visit value
+        final lastVisitTimestamp = existingDoc.get('last_visit') as Timestamp?;
+        lastVisit = lastVisitTimestamp != null ? lastVisitTimestamp.toDate() : now;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExistingVCScreen(
+              citizenId: citizenDocRef.id,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        // Create a new citizen record
+        citizenDocRef = await citizensRef.add({
+          'first_name': firstName,
+          'last_name': lastName,
+          'dob': Timestamp.fromDate(_dob!),
+          'vc_serial': widget.serial,
+          'last_visit': Timestamp.fromDate(now),
+          'visit_history': [Timestamp.fromDate(now)],
+        });
+
+        // Add reference in vc_serial/<serial>
+        await vcSerialRef.doc(widget.serial).set({
+          'citizenId': citizenDocRef.id,
+        });
+
+        DateTime lastVisit = now;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VCCompletionScreen(
+              firstName: firstName,
+              lastName: lastName,
+              lastVisit: lastVisit,
+            ),
+          ),
+        );
+      }
     } catch (e) {
       setState(() => _error = 'Registration failed: $e');
     } finally {

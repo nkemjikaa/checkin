@@ -36,33 +36,27 @@ class _VCCheckInScreenState extends State<VCCheckInScreen> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
-                  final serial = _vcController.text.trim().toUpperCase();
-                  if (!isValidVC(serial)) {
+                  final vc_serial = _vcController.text.trim().toUpperCase();
+                  if (!isValidVC(vc_serial)) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Incorrect Voter Card Serial.')),
                     );
                   } else {
-                    final doc = await FirebaseFirestore.instance.collection('voters').doc(serial).get();
-                    if (!doc.exists) {
+                    final vcSerialdoc = await FirebaseFirestore.instance.collection('vc_serial').doc(vc_serial).get();
+                    if (!vcSerialdoc.exists) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => UnregisteredVCScreen(serial: serial),
+                          builder: (context) => UnregisteredVCScreen(serial: vc_serial),
                         ),
                       );
                     } else {
-                      final data = doc.data()!;
-                      final firstName = data['first_name'] ?? 'Unknown';
-                      final lastName = data['last_name'] ?? 'Unknown';
-                      final lastVisit = (data['last_visit'] as Timestamp).toDate();
-
+                      final data = vcSerialdoc.data()!;
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => ExistingVCScreen(
-                            firstName: firstName,
-                            lastName: lastName,
-                            lastVisit: lastVisit,
+                            citizenId: data['citizenId'],
                           ),
                         ),
                       );

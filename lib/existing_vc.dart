@@ -3,21 +3,61 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'options.dart';
 
-class ExistingVCScreen extends StatelessWidget {
-  final String firstName;
-  final String lastName;
-  final DateTime lastVisit;
+class ExistingVCScreen extends StatefulWidget {
+  final String citizenId;
 
   const ExistingVCScreen({
-    required this.firstName,
-    required this.lastName,
-    required this.lastVisit,
+    required this.citizenId,
   });
 
   @override
+  _ExistingVCScreenState createState() => _ExistingVCScreenState();
+}
+
+class _ExistingVCScreenState extends State<ExistingVCScreen> {
+  String? firstName;
+  String? lastName;
+  DateTime? lastVisit;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCitizenData();
+  }
+
+  Future<void> _fetchCitizenData() async {
+    final doc = await FirebaseFirestore.instance.collection('citizens').doc(widget.citizenId).get();
+    if (doc.exists) {
+      final data = doc.data()!;
+      setState(() {
+        firstName = data['first_name'] ?? '';
+        lastName = data['last_name'] ?? '';
+        Timestamp? lastVisitTimestamp = data['last_visit'];
+        lastVisit = lastVisitTimestamp != null ? lastVisitTimestamp.toDate() : DateTime.now();
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        firstName = '';
+        lastName = '';
+        lastVisit = DateTime.now();
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final formattedDate = DateFormat.yMMMMd().format(lastVisit);
-    final bool canEnter = DateTime.now().difference(lastVisit).inDays >= 7;
+    if (isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Visitor Found')),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final formattedDate = DateFormat.yMMMMd().format(lastVisit!);
+    final bool canEnter = DateTime.now().difference(lastVisit!).inDays >= 7;
 
     return Scaffold(
       appBar: AppBar(title: Text('Visitor Found')),
@@ -48,11 +88,18 @@ class ExistingVCScreen extends StatelessWidget {
               SizedBox(height: 30),
               ElevatedButton(
                 onPressed: () async {
+                  final docRef = FirebaseFirestore.instance.collection('citizens').doc(widget.citizenId);
+                  final docSnapshot = await docRef.get();
+                  final data = docSnapshot.data() ?? {};
+                  final vcSerialExists = data.containsKey('vc_serial');
+
                   if (canEnter) {
                     final now = DateTime.now();
-                    await FirebaseFirestore.instance.collection('voters').doc('$firstName$lastName').update({
+                    await docRef.update({
                       'last_visit': now,
                       'visit_history': FieldValue.arrayUnion([now]),
+                      'nin': data['nin'] ?? '', // Keep existing nin if any
+                      'vc_serial': data['vc_serial'] ?? '', // Keep existing vc if any
                     });
 
                     Navigator.pushAndRemoveUntil(
@@ -61,6 +108,12 @@ class ExistingVCScreen extends StatelessWidget {
                       (route) => false,
                     );
                   } else {
+                    if (data['vc_serial'] == null || data['vc_serial'] == '') {
+                      await docRef.update({
+                        'vc_serial': data['vc_serial'] ?? '',
+                      });
+                    }
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Entry denied: must wait at least 7 days since last visit.')),
                     );

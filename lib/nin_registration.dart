@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'nin_completion.dart';
+import 'existing_nin.dart';
 
 class NINRegistration extends StatefulWidget {
   final String nin;
@@ -35,32 +36,65 @@ class _NINRegistrationState extends State<NINRegistration> {
 
       final now = DateTime.now();
 
-      // Create a new citizen record
-      final citizenDoc = await citizensRef.add({
-        'first_name': firstName,
-        'last_name': lastName,
-        'dob': _dob!.toIso8601String(),
-        'nin': widget.nin,
-        'vc_serial': null,
-        'last_visit': now,
-        'visit_history': [now],
-      });
+      // Check if a citizen with the same first_name, last_name, and dob exists
+      final querySnapshot = await citizensRef
+          .where('first_name', isEqualTo: firstName)
+          .where('last_name', isEqualTo: lastName)
+          .where('dob', isEqualTo: Timestamp.fromDate(_dob!))
+          .get();
 
-      // Create a user record referencing the citizen
-      await usersRef.doc(widget.nin).set({
-        'citizenId': citizenDoc.id,
-      });
+      DocumentReference citizenDocRef;
+      DateTime lastVisit;
+      if (querySnapshot.docs.isNotEmpty) {
+        // Update existing citizen document - only update 'nin' field
+        final existingDoc = querySnapshot.docs.first;
+        citizenDocRef = citizensRef.doc(existingDoc.id);
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NINCompletionScreen(
-            firstName: firstName,
-            lastName: lastName,
-            lastVisit: now,
+        await citizenDocRef.update({
+          'nin': widget.nin,
+        });
+        
+        // Use existing last_visit value
+        final lastVisitTimestamp = existingDoc.get('last_visit') as Timestamp?;
+        lastVisit = lastVisitTimestamp != null ? lastVisitTimestamp.toDate() : now;
+
+        // Navigate to ExistingNINScreen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExistingNINScreen(
+              citizenId: citizenDocRef.id,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        // Create a new citizen record
+        citizenDocRef = await citizensRef.add({
+          'first_name': firstName,
+          'last_name': lastName,
+          'dob': Timestamp.fromDate(_dob!),
+          'nin': widget.nin,
+          'last_visit': Timestamp.fromDate(now),
+          'visit_history': [Timestamp.fromDate(now)],
+        });
+        lastVisit = now;
+
+        // Create or update a user record referencing the citizen
+        await usersRef.doc(widget.nin).set({
+          'citizenId': citizenDocRef.id,
+        });
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NINCompletionScreen(
+              firstName: firstName,
+              lastName: lastName,
+              lastVisit: lastVisit,
+            ),
+          ),
+        );
+      }
     } catch (e) {
       setState(() => _error = 'Registration failed: $e');
     } finally {

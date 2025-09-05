@@ -38,8 +38,8 @@ class _NINCheckinScreenState extends State<NINCheckInScreen> {
                       SnackBar(content: Text('Incorrect NIN.')),
                     );
                   } else {
-                    final doc = await FirebaseFirestore.instance.collection('users').doc(nin).get();
-                    if (!doc.exists) {
+                    final ninDoc = await FirebaseFirestore.instance.collection('nin').doc(nin).get();
+                    if (!ninDoc.exists) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -47,18 +47,12 @@ class _NINCheckinScreenState extends State<NINCheckInScreen> {
                         ),
                       );
                     } else {
-                      final data = doc.data()!;
-                      final firstName = data['first_name'] ?? 'Unknown';
-                      final lastName = data['last_name'] ?? 'Unknown';
-                      final lastVisit = (data['last_visit'] as Timestamp).toDate();
-
+                      final data = ninDoc.data()!;
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => ExistingNINScreen(
-                            firstName: firstName,
-                            lastName: lastName,
-                            lastVisit: lastVisit,
+                            citizenId: data['citizenId']
                           ),
                         ),
                       );
