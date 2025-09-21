@@ -53,6 +53,10 @@ class _NINRegistrationState extends State<NINRegistration> {
         await citizenDocRef.update({
           'nin': widget.nin,
         });
+
+        await usersRef.doc(widget.nin).set({
+          'citizenId': citizenDocRef.id,
+        });
         
         // Use existing last_visit value
         final lastVisitTimestamp = existingDoc.get('last_visit') as Timestamp?;

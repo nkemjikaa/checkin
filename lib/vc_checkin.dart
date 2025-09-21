@@ -56,7 +56,7 @@ class _VCCheckInScreenState extends State<VCCheckInScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => ExistingVCScreen(
-                            citizenId: data['citizenId'],
+                            citizenId: vcSerialdoc['citizenId'],
                           ),
                         ),
                       );

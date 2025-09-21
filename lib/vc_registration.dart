@@ -53,7 +53,11 @@ class _VCRegistrationState extends State<VCRegistration> {
         await citizenDocRef.update({
           'vc_serial': widget.serial,
         });
-       // Use existing last_visit value
+        // Also update vc_serial collection to map serial to citizenId
+        await vcSerialRef.doc(widget.serial).set({
+          'citizenId': citizenDocRef.id,
+        });
+        // Use existing last_visit value
         final lastVisitTimestamp = existingDoc.get('last_visit') as Timestamp?;
         lastVisit = lastVisitTimestamp != null ? lastVisitTimestamp.toDate() : now;
 

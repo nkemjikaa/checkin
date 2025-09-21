@@ -22,14 +22,19 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     try {
-      final doc = await FirebaseFirestore.instance.collection('admins').doc(username).get();
+      final doc = await FirebaseFirestore.instance.collection('users').doc(username).get();
       if (!doc.exists) {
         setState(() => _error = 'User not found.');
       } else if (doc.data()?['password'] != password) {
         setState(() => _error = 'Incorrect password.');
       } else {
-        // Success: Navigate to main check-in screen
-        Navigator.pushReplacementNamed(context, '/options');
+        // Success: check role and navigate accordingly
+        final role = doc.data()?['role'] ?? 'user';
+        if (role == 'admin') {
+          Navigator.pushReplacementNamed(context, '/admindashboard');
+        } else {
+          Navigator.pushReplacementNamed(context, '/options');
+        }
       }
     } catch (e) {
       setState(() => _error = 'Login failed: $e');

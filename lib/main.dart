@@ -9,6 +9,7 @@ import 'nin_registration.dart';
 import 'unregistered_nin.dart';
 import 'vc_registration.dart';
 import 'unregistered_vc.dart';
+import 'admin_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,7 @@ class MyApp extends StatelessWidget {
         '/nincheckin': (context) => NINCheckInScreen(),
         '/options': (context) => OptionsScreen(),
         '/vccheckin': (context) =>  VCCheckInScreen(),
+        '/admindashboard': (context) => AdminScreen(),
       }
     );
   }
